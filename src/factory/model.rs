@@ -111,9 +111,10 @@ impl FactoryData {
     }
 }
 
-pub trait IInject {
-    fn inject(&mut self,factory_data:FactoryData,factory:BeanFactory);
-    fn complete(&mut self,factory:BeanFactory);
+pub trait Inject {
+    type Context;
+    fn inject(&mut self,factory_data:FactoryData,factory:BeanFactory,ctx:&mut Self::Context);
+    fn complete(&mut self,ctx:&mut Self::Context);
 }
 
 #[derive(Message)]
@@ -130,10 +131,8 @@ pub struct QueryBean(pub String);
 pub enum FactoryEvent {
     Inject {
         factory: BeanFactory,
-        data: FactoryData,
+        factory_data: FactoryData,
     },
-    Complete {
-        factory: BeanFactory,
-    }
+    Complete
 }
 

@@ -50,12 +50,11 @@ impl BeanFactoryCore {
     }
 
     fn inject(&mut self,ctx: &mut Context<Self>) {
-        let bean_factory = BeanFactory::new_by_core(ctx.address());
         let inject_event = FactoryEvent::Inject { 
-            factory: bean_factory.clone(), 
-            data:  FactoryData(Arc::new(self.bean_map.clone())),
+            factory: BeanFactory::new_by_core(ctx.address()), 
+            factory_data:  FactoryData(Arc::new(self.bean_map.clone())),
         };
-        let complete_event = FactoryEvent::Complete { factory: bean_factory };
+        let complete_event = FactoryEvent::Complete;
         self.do_notify_event(inject_event);
         self.do_notify_event(complete_event);
     }

@@ -1,7 +1,7 @@
 use std::{any::type_name, sync::Arc};
 
 use actix::prelude::*;
-use actix_inject::factory::{model::{IInject, FactoryEvent, BeanDefinition}, BeanFactory, BeanFactoryCore};
+use actix_inject::factory::{model::{Inject, FactoryEvent, BeanDefinition}, BeanFactory, BeanFactoryCore};
 
 
 struct Ping(usize);
@@ -35,13 +35,14 @@ struct MyActor {
     foo_addr: Option<Addr<FooActor>>,
 }
 
-impl IInject for MyActor {
-    fn inject(&mut self,factory_data:actix_inject::factory::model::FactoryData,_factory:actix_inject::factory::BeanFactory) {
+impl Inject for MyActor {
+    type Context = Context<Self>;
+    fn inject(&mut self,factory_data:actix_inject::factory::model::FactoryData,_factory:actix_inject::factory::BeanFactory,_ctx:&mut Self::Context) {
         self.foo_addr = factory_data.get_actor();
         println!("MyActor inject");
     }
 
-    fn complete(&mut self,_factory:actix_inject::factory::BeanFactory) {
+    fn complete(&mut self,_ctx:&mut Self::Context) {
         println!("MyActor inject complete");
     }
 }
@@ -67,11 +68,11 @@ impl Handler<FactoryEvent> for MyActor {
 
     fn handle(&mut self, msg: FactoryEvent, ctx: &mut Self::Context) -> Self::Result {
         match msg {
-            FactoryEvent::Inject { factory, data } => {
-                self.inject(data, factory)
+            FactoryEvent::Inject { factory, factory_data} => {
+                Inject::inject(self, factory_data, factory,ctx);
             },
-            FactoryEvent::Complete { factory } => {
-                self.complete(factory)
+            FactoryEvent::Complete => {
+                self.complete(ctx);
             },
         }
     }
