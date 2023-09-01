@@ -3,31 +3,32 @@ use std::{collections::HashMap, sync::Arc, any::type_name};
 
 use actix::prelude::*;
 
-use self::model::{ActorBean, DynAny, FactoryEvent, FactoryData, RegisterBean, InitFactory, QueryBean};
+use self::model::{BeanDefinition, DynAny, FactoryEvent, FactoryData, RegisterBean, InitFactory, QueryBean};
 
 pub mod model;
 
 #[derive(Default)]
 pub struct BeanFactoryCore {
-    component_map: HashMap<String,Arc<DynAny>>,
-    bean_map: HashMap<String,ActorBean>,
+    bean_map: HashMap<String,Arc<DynAny>>,
+    bean_definition_map: HashMap<String,BeanDefinition>,
 }
 
 impl BeanFactoryCore {
     fn init(&mut self)  {
-        for (_,bean) in &self.bean_map {
+        for (_,bean) in &self.bean_definition_map {
             if let Some(v) = (bean.provider)() {
-                self.component_map.insert(bean.type_name.to_owned(), v);
+                self.bean_map.insert(bean.type_name.to_owned(), v);
             }
         }
     }
 
     fn do_notify_event(&mut self,event: FactoryEvent) {
-        for (name,bean) in &self.bean_map {
+        for (name,bean) in &self.bean_definition_map {
             if !bean.inject {
                 continue;
             }
-            match (self.component_map.get(name),bean.notify.as_ref()) {
+
+            match (self.bean_map.get(name),bean.notify.as_ref()) {
                 (Some(c),Some(notify)) => {
                     notify(c.clone(),event.clone())
                 }
@@ -40,7 +41,7 @@ impl BeanFactoryCore {
         let bean_factory = BeanFactory::new_by_core(ctx.address());
         let inject_event = FactoryEvent::Inject { 
             factory: bean_factory.clone(), 
-            data:  FactoryData(Arc::new(self.component_map.clone())),
+            data:  FactoryData(Arc::new(self.bean_map.clone())),
         };
         let complete_event = FactoryEvent::Complete { factory: bean_factory };
         self.do_notify_event(inject_event);
@@ -59,7 +60,7 @@ impl Actor for BeanFactoryCore {
 impl Handler<RegisterBean> for BeanFactoryCore {
     type Result = ();
     fn handle(&mut self, msg: RegisterBean, ctx: &mut Self::Context) -> Self::Result {
-        self.bean_map.insert(msg.type_name, msg.bean);
+        self.bean_definition_map.insert(msg.type_name, msg.bean);
     }
 }
 
@@ -76,7 +77,7 @@ impl Handler<QueryBean> for BeanFactoryCore {
     type Result=Option<Arc<DynAny>>;
 
     fn handle(&mut self, msg: QueryBean, ctx: &mut Self::Context) -> Self::Result {
-        self.component_map.get(&msg.0).map(|e|e.clone())
+        self.bean_map.get(&msg.0).map(|e|e.clone())
     }
 }
 
@@ -85,7 +86,7 @@ impl Handler<QueryBean> for BeanFactoryCore {
 
 #[derive(Clone)]
 pub struct BeanFactory {
-    core_addr: Addr<BeanFactoryCore>,
+    pub core_addr: Addr<BeanFactoryCore>,
 }
 
 impl BeanFactory {

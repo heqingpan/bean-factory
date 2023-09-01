@@ -9,7 +9,7 @@ use super::BeanFactory;
 pub type DynAny = dyn Any + 'static + Send + Sync;
 
 #[derive(Clone)]
-pub struct ActorBean {
+pub struct BeanDefinition {
     pub type_name: String,
     pub provider: Arc<dyn Fn() -> Option<Arc<DynAny>> + Send + Sync>,
     pub notify: Option<Arc<dyn Fn(Arc<DynAny>,FactoryEvent) -> () + Send + Sync >>,
@@ -48,7 +48,7 @@ pub trait IInject {
 #[rtype(result="()")]
 pub struct RegisterBean {
     pub type_name: String,
-    pub bean: ActorBean,
+    pub bean: BeanDefinition,
 }
 
 #[derive(Message)]

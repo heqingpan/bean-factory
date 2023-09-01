@@ -1,7 +1,7 @@
 use std::{any::type_name, sync::Arc};
 
 use actix::prelude::*;
-use actix_inject::factory::{model::{IInject, FactoryEvent, RegisterBean, ActorBean}, BeanFactory, BeanFactoryCore};
+use actix_inject::factory::{model::{IInject, FactoryEvent, RegisterBean, BeanDefinition}, BeanFactory, BeanFactoryCore};
 
 
 struct Ping(usize);
@@ -84,7 +84,7 @@ async fn register_foo() {
     let name = type_name::<MyActor>();
     let bean = RegisterBean{ 
         type_name: name.to_string(), 
-        bean: ActorBean { 
+        bean: BeanDefinition { 
             type_name: name.to_string(), 
             provider: Arc::new(||{Some(Arc::new(MyActor::default().start()))}), 
             notify: Some(Arc::new(|a,event| {
@@ -97,7 +97,7 @@ async fn register_foo() {
     let name = type_name::<FooActor>();
     let bean = RegisterBean{ 
         type_name: name.to_string(), 
-        bean: ActorBean { 
+        bean: BeanDefinition { 
             type_name: name.to_string(), 
             provider: Arc::new(||{Some(Arc::new(FooActor::default().start()))}), 
             notify: None, 
