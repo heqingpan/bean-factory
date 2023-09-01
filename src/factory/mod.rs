@@ -1,9 +1,9 @@
-use std::{any::type_name, collections::HashMap, sync::Arc};
+use std::{any::type_name, collections::HashMap, sync::Arc, vec};
 
 use actix::prelude::*;
 //use actix::dev::ToEnvelope;
 
-use self::model::{BeanDefinition, DynAny, FactoryData, FactoryEvent, InitFactory, QueryBean};
+use self::model::{BeanDefinition, DynAny, FactoryData, FactoryEvent, InitFactory, QueryBean, BeanFactoryResult, BeanFactoryCmd};
 
 pub mod model;
 
@@ -90,12 +90,39 @@ impl Handler<QueryBean> for BeanFactoryCore {
     }
 }
 
+impl Handler<BeanFactoryCmd> for BeanFactoryCore {
+    type Result = Option<BeanFactoryResult>;
+
+    fn handle(&mut self, msg: BeanFactoryCmd, ctx: &mut Self::Context) -> Self::Result {
+        match msg {
+            BeanFactoryCmd::Init => {
+                self.init();
+                self.inject(ctx);
+                Some(BeanFactoryResult::None)
+            },
+            BeanFactoryCmd::QueryBean(name) => {
+                let v=self.bean_map.get(&name).map(|e| e.clone());
+                Some(BeanFactoryResult::Bean(v))
+            },
+            BeanFactoryCmd::QueryBeanNames => {
+                let v = self.bean_definition_map.keys().into_iter().cloned().collect();
+                Some(BeanFactoryResult::BeanNames(v))
+            },
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct BeanFactory {
     pub core_addr: Addr<BeanFactoryCore>,
 }
 
 impl BeanFactory {
+
+    pub fn new() -> Self {
+        BeanFactory { core_addr: BeanFactoryCore::start_default() }
+    }
+
     pub fn new_by_core(core_addr: Addr<BeanFactoryCore>) -> Self {
         Self { core_addr }
     }
@@ -106,6 +133,20 @@ impl BeanFactory {
 
     pub fn init(&self) {
         self.core_addr.do_send(InitFactory);
+    }
+
+    pub async fn query_bean_names(&self) -> Vec<String> {
+        match self.core_addr.send(BeanFactoryCmd::QueryBeanNames).await {
+            Ok(resp) => {
+                resp.map_or(vec![], |r|{
+                    match r {
+                        BeanFactoryResult::BeanNames(v) => v,
+                        _ => vec![]
+                    }
+                })
+            },
+            Err(_) => vec![],
+        }
     }
 
     pub async fn get_actor_by_name<T: Actor>(&self, name: &str) -> Option<Addr<T>> {

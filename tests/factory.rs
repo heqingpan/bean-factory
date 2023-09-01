@@ -1,10 +1,13 @@
-use std::{any::type_name, sync::Arc};
+//use std::{any::type_name, sync::Arc};
 
 use actix::prelude::*;
+/*
 use actix_inject::factory::{
     model::{BeanDefinition, FactoryEvent, Inject},
     BeanFactory, BeanFactoryCore,
 };
+*/
+use actix_inject::{BeanDefinition,FactoryEvent,Inject,BeanFactory,BeanFactoryCore,setup_submitted_beans,ActorComponent, InjectComponent};
 
 struct Ping(usize);
 
@@ -12,7 +15,7 @@ impl Message for Ping {
     type Result = usize;
 }
 
-#[derive(Default)]
+#[derive(Default,ActorComponent)]
 struct FooActor {}
 
 impl Actor for FooActor {
@@ -29,7 +32,7 @@ impl Handler<Ping> for FooActor {
 }
 
 /// Actor
-#[derive(Default)]
+#[derive(Default,InjectComponent)]
 struct MyActor {
     count: usize,
     foo_addr: Option<Addr<FooActor>>,
@@ -68,6 +71,7 @@ impl Handler<Ping> for MyActor {
     }
 }
 
+/*
 impl Handler<FactoryEvent> for MyActor {
     type Result = ();
 
@@ -85,6 +89,7 @@ impl Handler<FactoryEvent> for MyActor {
         }
     }
 }
+ */
 
 #[actix::test]
 async fn register_foo() {
@@ -117,6 +122,21 @@ async fn register_foo() {
     println!("------001");
     factory.init();
     println!("------002");
+    take(&factory).await;
+    take(&factory).await;
+    take(&factory).await;
+    take(&factory).await;
+}
+
+#[actix::test]
+async fn register_002() {
+    let factory = BeanFactory::new();
+    setup_submitted_beans(&factory);
+    let bean_names = factory.query_bean_names().await;
+    println!("all beans size:{}",bean_names.len());
+    for item in &bean_names {
+        println!("\t{}",item)
+    }
     take(&factory).await;
     take(&factory).await;
     take(&factory).await;

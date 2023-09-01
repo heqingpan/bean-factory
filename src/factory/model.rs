@@ -1,5 +1,4 @@
 use std::any::{type_name, Any};
-use std::default;
 use std::{collections::HashMap, sync::Arc};
 
 use actix::dev::ToEnvelope;
@@ -94,6 +93,8 @@ impl BeanDefinition {
     }
 }
 
+inventory::collect!(BeanDefinition);
+
 #[derive(Debug, Clone)]
 pub struct FactoryData(pub Arc<HashMap<String, Arc<DynAny>>>);
 
@@ -131,6 +132,20 @@ pub trait Inject {
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct InitFactory;
+
+#[derive(Message)]
+#[rtype(result = "Option<BeanFactoryResult>")]
+pub enum BeanFactoryCmd{
+    Init,
+    QueryBean(String),
+    QueryBeanNames,
+}
+
+pub enum BeanFactoryResult{
+    None,
+    BeanNames(Vec<String>),
+    Bean(Option<Arc<DynAny>>),
+}
 
 #[derive(Message)]
 #[rtype(result = "Option<Arc<DynAny>>")]
