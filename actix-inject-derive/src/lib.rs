@@ -1,7 +1,6 @@
-
-use quote::quote;
 use proc_macro::TokenStream;
-use syn::{ItemFn, AttributeArgs, NestedMeta};
+use quote::quote;
+use syn::{AttributeArgs, ItemFn, NestedMeta};
 
 #[proc_macro_derive(Component)]
 pub fn component_derive(input: TokenStream) -> TokenStream {
@@ -20,4 +19,3 @@ pub fn component_derive(input: TokenStream) -> TokenStream {
 
     gen.into()
 }
-
