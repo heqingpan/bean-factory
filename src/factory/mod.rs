@@ -2,8 +2,9 @@
 use std::{collections::HashMap, sync::Arc, any::type_name};
 
 use actix::prelude::*;
+//use actix::dev::ToEnvelope;
 
-use self::model::{BeanDefinition, DynAny, FactoryEvent, FactoryData, RegisterBean, InitFactory, QueryBean};
+use self::model::{BeanDefinition, DynAny, FactoryEvent, FactoryData, InitFactory, QueryBean};
 
 pub mod model;
 
@@ -22,12 +23,23 @@ impl BeanFactoryCore {
         }
     }
 
+    /*
+    fn do_notify<T>(c:Arc<DynAny>,event: FactoryEvent)
+    where T: Actor<Context = Context<T>> + Handler<FactoryEvent>,
+        <T as Actor>::Context: AsyncContext<T> + ToEnvelope<T,FactoryEvent>
+    {
+        c.downcast::<Addr<T>>().ok().map(|e|e.do_send(event));
+    }
+    */
+
     fn do_notify_event(&mut self,event: FactoryEvent) {
         for (name,bean) in &self.bean_definition_map {
+            /*
             if !bean.inject {
                 continue;
             }
-
+            */
+            //self.bean_map.get(name).map(|e| Self::do_notify2(e.clone(), event));
             match (self.bean_map.get(name),bean.notify.as_ref()) {
                 (Some(c),Some(notify)) => {
                     notify(c.clone(),event.clone())
@@ -57,10 +69,10 @@ impl Actor for BeanFactoryCore {
     }
 }
 
-impl Handler<RegisterBean> for BeanFactoryCore {
+impl Handler<BeanDefinition> for BeanFactoryCore {
     type Result = ();
-    fn handle(&mut self, msg: RegisterBean, ctx: &mut Self::Context) -> Self::Result {
-        self.bean_definition_map.insert(msg.type_name, msg.bean);
+    fn handle(&mut self, msg: BeanDefinition, ctx: &mut Self::Context) -> Self::Result {
+        self.bean_definition_map.insert(msg.type_name.to_owned(), msg);
     }
 }
 
@@ -96,7 +108,7 @@ impl BeanFactory {
         }
     }
 
-    pub fn register(&self,bean:RegisterBean) {
+    pub fn register(&self,bean:BeanDefinition) {
         self.core_addr.do_send(bean);
     }
 

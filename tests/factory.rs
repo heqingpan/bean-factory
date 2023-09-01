@@ -1,7 +1,7 @@
 use std::{any::type_name, sync::Arc};
 
 use actix::prelude::*;
-use actix_inject::factory::{model::{IInject, FactoryEvent, RegisterBean, BeanDefinition}, BeanFactory, BeanFactoryCore};
+use actix_inject::factory::{model::{IInject, FactoryEvent, BeanDefinition}, BeanFactory, BeanFactoryCore};
 
 
 struct Ping(usize);
@@ -81,29 +81,29 @@ impl Handler<FactoryEvent> for MyActor {
 async fn register_foo() {
     let factory_core = BeanFactoryCore::start_default();
     let factory = BeanFactory::new_by_core(factory_core);
+    /*
     let name = type_name::<MyActor>();
-    let bean = RegisterBean{ 
+    let bean = BeanDefinition { 
         type_name: name.to_string(), 
-        bean: BeanDefinition { 
-            type_name: name.to_string(), 
-            provider: Arc::new(||{Some(Arc::new(MyActor::default().start()))}), 
-            notify: Some(Arc::new(|a,event| {
-                a.downcast::<Addr<MyActor>>().ok().map(|e|e.do_send(event));
-            })), 
-            inject: true,
-        }
+        provider: Arc::new(||{Some(Arc::new(MyActor::default().start()))}), 
+        notify: Some(Arc::new(|a,event| {
+            a.downcast::<Addr<MyActor>>().ok().map(|e|e.do_send(event));
+        })), 
+        //inject: true,
     };
+     */
+    let bean = BeanDefinition::actor_with_inject_from_default::<MyActor>();
     factory.register(bean);
+    /*
     let name = type_name::<FooActor>();
-    let bean = RegisterBean{ 
+    let bean=BeanDefinition { 
         type_name: name.to_string(), 
-        bean: BeanDefinition { 
-            type_name: name.to_string(), 
-            provider: Arc::new(||{Some(Arc::new(FooActor::default().start()))}), 
-            notify: None, 
-            inject: true,
-        }
+        provider: Arc::new(||{Some(Arc::new(FooActor::default().start()))}), 
+        notify: None, 
+        //inject: true,
     };
+     */
+    let bean = BeanDefinition::actor_from_default::<FooActor>();
     factory.register(bean);
     println!("------001");
     factory.init();
