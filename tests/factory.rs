@@ -1,13 +1,8 @@
 //use std::{any::type_name, sync::Arc};
 
 use actix::prelude::*;
-/*
-use actix_inject::factory::{
-    model::{BeanDefinition, FactoryEvent, Inject},
-    BeanFactory, BeanFactoryCore,
-};
-*/
-use actix_inject::{BeanDefinition,FactoryEvent,Inject,BeanFactory,BeanFactoryCore,setup_submitted_beans,ActorComponent, InjectComponent};
+
+use bean_factory::{BeanDefinition,FactoryEvent,Inject,BeanFactory,BeanFactoryCore,setup_submitted_beans,ActorComponent, InjectComponent, FactoryData};
 
 struct Ping(usize);
 
@@ -26,7 +21,7 @@ impl Handler<Ping> for FooActor {
     type Result = usize;
 
     fn handle(&mut self, msg: Ping, _: &mut Context<Self>) -> Self::Result {
-        println!("do ping by FooActor,{}", msg.0);
+        println!("handle ping by FooActor,{}", msg.0);
         0
     }
 }
@@ -42,8 +37,8 @@ impl Inject for MyActor {
     type Context = Context<Self>;
     fn inject(
         &mut self,
-        factory_data: actix_inject::factory::model::FactoryData,
-        _factory: actix_inject::factory::BeanFactory,
+        factory_data: FactoryData,
+        _factory: BeanFactory,
         _ctx: &mut Self::Context,
     ) {
         self.foo_addr = factory_data.get_actor();
@@ -92,7 +87,7 @@ impl Handler<FactoryEvent> for MyActor {
  */
 
 #[actix::test]
-async fn register_foo() {
+async fn register_001() {
     let factory_core = BeanFactoryCore::start_default();
     let factory = BeanFactory::new_by_core(factory_core);
     /*

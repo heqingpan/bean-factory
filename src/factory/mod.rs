@@ -7,6 +7,17 @@ use self::model::{BeanDefinition, DynAny, FactoryData, FactoryEvent, InitFactory
 
 pub mod model;
 
+fn spawn_start(inner: BeanFactoryCore) -> Addr<BeanFactoryCore> {
+    let (tx, rx) = std::sync::mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+        let rt = System::new();
+        let addrs = rt.block_on(async { inner.start() });
+        tx.send(addrs).unwrap();
+        rt.run().unwrap();
+    });
+    rx.recv().unwrap()
+}
+
 #[derive(Default)]
 pub struct BeanFactoryCore {
     bean_map: HashMap<String, Arc<DynAny>>,
@@ -14,6 +25,11 @@ pub struct BeanFactoryCore {
 }
 
 impl BeanFactoryCore {
+
+    pub fn spawn_start(self) -> Addr<Self> {
+        spawn_start(self)
+    }
+
     fn init(&mut self) {
         for (_, bean) in &self.bean_definition_map {
             if let Some(v) = (bean.provider)() {
@@ -119,18 +135,29 @@ pub struct BeanFactory {
 
 impl BeanFactory {
 
+    /// 在actic环境下创建BeanFactory
     pub fn new() -> Self {
         BeanFactory { core_addr: BeanFactoryCore::start_default() }
+    }
+
+    /// 在普通环境下，在一个新建的actix线程创建BeanFactoryCore,再创建BeanFactory
+    pub fn spawn_new() -> Self {
+        BeanFactory { core_addr: BeanFactoryCore::default().spawn_start() }
     }
 
     pub fn new_by_core(core_addr: Addr<BeanFactoryCore>) -> Self {
         Self { core_addr }
     }
 
+    /// 注册bean
+    /// 只注册没有执行创建实例
     pub fn register(&self, bean: BeanDefinition) {
         self.core_addr.do_send(bean);
     }
 
+    /// 初始化工厂
+    /// 创建bean实例
+    /// 并触发依赖注入
     pub fn init(&self) {
         self.core_addr.do_send(InitFactory);
     }

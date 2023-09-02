@@ -1,11 +1,11 @@
 [workspace]
 members = [
     ".",
-    "actix-inject-derive",
+    "bean-factory-derive",
 ]
 
 [package]
-name = "actix-inject"
+name = "bean_factory"
 version = "0.1.0"
 edition = "2021"
 
@@ -18,4 +18,4 @@ dashmap = "4"
 once_cell = "1.8"
 inventory = "0.1.10"
 
-actix-inject-derive = { path = "./actix-inject-derive", version="0.1.0"}
+bean_factory_derive= { path = "./bean-factory-derive", version="0.1.0"}

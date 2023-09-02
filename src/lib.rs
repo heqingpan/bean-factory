@@ -7,7 +7,7 @@ pub use factory::{
 pub use actix::prelude::{Handler,Addr};
 
 pub use inventory::submit;
-pub use actix_inject_derive::*;
+pub use bean_factory_derive::*;
 
 
 /// 注册所有声明的beans，并初始化工场，开始注入依赖Bean

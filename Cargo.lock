@@ -28,26 +28,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-inject"
-version = "0.1.0"
-dependencies = [
- "actix",
- "actix-inject-derive",
- "dashmap",
- "inventory",
- "log",
- "once_cell",
-]
-
-[[package]]
-name = "actix-inject-derive"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "actix-macros"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -112,6 +92,26 @@ dependencies = [
  "miniz_oxide",
  "object",
  "rustc-demangle",
+]
+
+[[package]]
+name = "bean_factory"
+version = "0.1.0"
+dependencies = [
+ "actix",
+ "bean_factory_derive",
+ "dashmap",
+ "inventory",
+ "log",
+ "once_cell",
+]
+
+[[package]]
+name = "bean_factory_derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
