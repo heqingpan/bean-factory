@@ -85,7 +85,7 @@ impl BeanDefinition {
 
     pub fn actor_with_inject_from_fn<T>(f: impl Fn() -> Addr<T> + 'static + Send + Sync) -> Self
     where
-        T: Default + Actor<Context = Context<T>> + Handler<FactoryEvent>,
+        T: Actor<Context = Context<T>> + Handler<FactoryEvent>,
         <T as Actor>::Context: ToEnvelope<T, FactoryEvent>,
     {
         Self {
@@ -117,7 +117,7 @@ impl BeanDefinition {
 
     pub fn actor_with_inject_from_obj<T>(v: Addr<T>) -> Self
     where
-        T: Default + Actor<Context = Context<T>> + Handler<FactoryEvent>,
+        T: Actor<Context = Context<T>> + Handler<FactoryEvent>,
         <T as Actor>::Context: ToEnvelope<T, FactoryEvent>,
     {
         Self {
