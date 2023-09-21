@@ -6,7 +6,7 @@ members = [
 
 [package]
 name = "bean_factory"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["heqingpan <heqingpan@126.com>"]
 license = "MIT/Apache-2.0"
 description = "A rust bean factory,support inject reference bean"
@@ -24,4 +24,4 @@ dashmap = "4"
 once_cell = "1.8"
 inventory = "0.1.10"
 
-bean_factory_derive= { path = "./bean-factory-derive", version="0.1.1"}
+bean_factory_derive= { path = "./bean-factory-derive", version="0.1.2"}

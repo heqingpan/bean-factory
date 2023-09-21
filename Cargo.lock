@@ -96,7 +96,7 @@ dependencies = [
 
 [[package]]
 name = "bean_factory"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "actix",
  "bean_factory_derive",
@@ -108,7 +108,7 @@ dependencies = [
 
 [[package]]
 name = "bean_factory_derive"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "quote",
  "syn 1.0.109",
