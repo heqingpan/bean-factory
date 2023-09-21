@@ -8,11 +8,17 @@ use super::BeanFactory;
 
 pub type DynAny = dyn Any + 'static + Send + Sync;
 
+#[derive(Clone)]
+pub enum Provieder {
+    Fn(Arc<dyn Fn() -> Option<Arc<DynAny>> + Send + Sync>),
+    Value(Arc<DynAny>),
+}
+
 #[derive(Clone, Message)]
 #[rtype(result = "()")]
 pub struct BeanDefinition {
     pub type_name: String,
-    pub provider: Arc<dyn Fn() -> Option<Arc<DynAny>> + Send + Sync>,
+    pub provider: Provieder,
     pub notify: Option<Arc<dyn Fn(Arc<DynAny>, FactoryEvent) -> () + Send + Sync>>,
     //pub inject: bool,
 }
@@ -21,9 +27,10 @@ impl BeanDefinition {
     pub fn from_default<C: Default + Any + 'static + Send + Sync>() -> Self {
         Self {
             type_name: std::any::type_name::<C>().to_string(),
-            provider: Arc::new(move || Some(C::default()).map(|x| Arc::new(x) as Arc<DynAny>)),
+            provider: Provieder::Fn(Arc::new(move || {
+                Some(C::default()).map(|x| Arc::new(x) as Arc<DynAny>)
+            })),
             notify: None,
-            //inject: false
         }
     }
 
@@ -33,11 +40,10 @@ impl BeanDefinition {
     {
         Self {
             type_name: std::any::type_name::<T>().to_string(),
-            provider: Arc::new(move || {
+            provider: Provieder::Fn(Arc::new(move || {
                 Some(T::default().start()).map(|x| Arc::new(x) as Arc<DynAny>)
-            }),
+            })),
             notify: None,
-            //inject: false
         }
     }
 
@@ -48,47 +54,78 @@ impl BeanDefinition {
     {
         Self {
             type_name: std::any::type_name::<T>().to_string(),
-            provider: Arc::new(move || {
+            provider: Provieder::Fn(Arc::new(move || {
                 Some(T::default().start()).map(|x| Arc::new(x) as Arc<DynAny>)
-            }),
+            })),
             notify: Some(Arc::new(|a, event| {
                 a.downcast::<Addr<T>>().ok().map(|e| e.do_send(event));
             })),
-            //inject: false
         }
     }
 
     pub fn from_fn<T: 'static + Send + Sync>(f: impl Fn() -> T + 'static + Send + Sync) -> Self {
         Self {
             type_name: std::any::type_name::<T>().to_string(),
-            provider: Arc::new(move || Some(f()).map(|x| Arc::new(x) as Arc<DynAny>)),
+            provider: Provieder::Fn(Arc::new(move || {
+                Some(f()).map(|x| Arc::new(x) as Arc<DynAny>)
+            })),
             notify: None,
-            //inject: false,
         }
     }
 
     pub fn actor_from_fn<T: Actor>(f: impl Fn() -> Addr<T> + 'static + Send + Sync) -> Self {
         Self {
             type_name: std::any::type_name::<T>().to_string(),
-            provider: Arc::new(move || Some(f()).map(|x| Arc::new(x) as Arc<DynAny>)),
+            provider: Provieder::Fn(Arc::new(move || {
+                Some(f()).map(|x| Arc::new(x) as Arc<DynAny>)
+            })),
             notify: None,
-            //inject: false,
         }
     }
 
-    pub fn actor_with_inject_from_fn<T>(
-        f: impl Fn() -> Addr<T> + 'static + Send + Sync,
-        notify: Arc<dyn Fn(Arc<DynAny>, FactoryEvent) -> () + Send + Sync>,
-    ) -> Self
+    pub fn actor_with_inject_from_fn<T>(f: impl Fn() -> Addr<T> + 'static + Send + Sync) -> Self
     where
         T: Default + Actor<Context = Context<T>> + Handler<FactoryEvent>,
         <T as Actor>::Context: ToEnvelope<T, FactoryEvent>,
     {
         Self {
             type_name: std::any::type_name::<T>().to_string(),
-            provider: Arc::new(move || Some(f()).map(|x| Arc::new(x) as Arc<DynAny>)),
-            notify: Some(notify),
-            //inject: false,
+            provider: Provieder::Fn(Arc::new(move || {
+                Some(f()).map(|x| Arc::new(x) as Arc<DynAny>)
+            })),
+            notify: Some(Arc::new(|a, event| {
+                a.downcast::<Addr<T>>().ok().map(|e| e.do_send(event));
+            })),
+        }
+    }
+
+    pub fn from_obj<T: 'static + Send + Sync>(v: Arc<T>) -> Self {
+        Self {
+            type_name: std::any::type_name::<T>().to_string(),
+            provider: Provieder::Value(v),
+            notify: None,
+        }
+    }
+
+    pub fn actor_from_obj<T: Actor>(v: Addr<T>) -> Self {
+        Self {
+            type_name: std::any::type_name::<T>().to_string(),
+            provider: Provieder::Value(Arc::new(v)),
+            notify: None,
+        }
+    }
+
+    pub fn actor_with_inject_from_obj<T>(v: Addr<T>) -> Self
+    where
+        T: Default + Actor<Context = Context<T>> + Handler<FactoryEvent>,
+        <T as Actor>::Context: ToEnvelope<T, FactoryEvent>,
+    {
+        Self {
+            type_name: std::any::type_name::<T>().to_string(),
+            provider: Provieder::Value(Arc::new(v)),
+            notify: Some(Arc::new(|a, event| {
+                a.downcast::<Addr<T>>().ok().map(|e| e.do_send(event));
+            })),
         }
     }
 }
@@ -135,13 +172,13 @@ pub struct InitFactory;
 
 #[derive(Message)]
 #[rtype(result = "Option<BeanFactoryResult>")]
-pub enum BeanFactoryCmd{
+pub enum BeanFactoryCmd {
     Init,
     QueryBean(String),
     QueryBeanNames,
 }
 
-pub enum BeanFactoryResult{
+pub enum BeanFactoryResult {
     None,
     BeanNames(Vec<String>),
     Bean(Option<Arc<DynAny>>),

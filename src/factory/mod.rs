@@ -3,7 +3,10 @@ use std::{any::type_name, collections::HashMap, sync::Arc, vec};
 use actix::prelude::*;
 //use actix::dev::ToEnvelope;
 
-use self::model::{BeanDefinition, DynAny, FactoryData, FactoryEvent, InitFactory, QueryBean, BeanFactoryResult, BeanFactoryCmd};
+use self::model::{
+    BeanDefinition, BeanFactoryCmd, BeanFactoryResult, DynAny, FactoryData, FactoryEvent,
+    InitFactory, QueryBean,
+};
 
 pub mod model;
 
@@ -25,15 +28,21 @@ pub struct BeanFactoryCore {
 }
 
 impl BeanFactoryCore {
-
     pub fn spawn_start(self) -> Addr<Self> {
         spawn_start(self)
     }
 
     fn init(&mut self) {
         for (_, bean) in &self.bean_definition_map {
-            if let Some(v) = (bean.provider)() {
-                self.bean_map.insert(bean.type_name.to_owned(), v);
+            match &bean.provider {
+                model::Provieder::Fn(f) => {
+                    if let Some(v) = f() {
+                        self.bean_map.insert(bean.type_name.to_owned(), v);
+                    }
+                }
+                model::Provieder::Value(v) => {
+                    self.bean_map.insert(bean.type_name.to_owned(), v.clone());
+                }
             }
         }
     }
@@ -83,7 +92,7 @@ impl Actor for BeanFactoryCore {
 
 impl Handler<BeanDefinition> for BeanFactoryCore {
     type Result = ();
-    fn handle(&mut self, msg: BeanDefinition, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: BeanDefinition, _ctx: &mut Self::Context) -> Self::Result {
         self.bean_definition_map
             .insert(msg.type_name.to_owned(), msg);
     }
@@ -101,7 +110,7 @@ impl Handler<InitFactory> for BeanFactoryCore {
 impl Handler<QueryBean> for BeanFactoryCore {
     type Result = Option<Arc<DynAny>>;
 
-    fn handle(&mut self, msg: QueryBean, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: QueryBean, _ctx: &mut Self::Context) -> Self::Result {
         self.bean_map.get(&msg.0).map(|e| e.clone())
     }
 }
@@ -115,15 +124,20 @@ impl Handler<BeanFactoryCmd> for BeanFactoryCore {
                 self.init();
                 self.inject(ctx);
                 Some(BeanFactoryResult::None)
-            },
+            }
             BeanFactoryCmd::QueryBean(name) => {
-                let v=self.bean_map.get(&name).map(|e| e.clone());
+                let v = self.bean_map.get(&name).map(|e| e.clone());
                 Some(BeanFactoryResult::Bean(v))
-            },
+            }
             BeanFactoryCmd::QueryBeanNames => {
-                let v = self.bean_definition_map.keys().into_iter().cloned().collect();
+                let v = self
+                    .bean_definition_map
+                    .keys()
+                    .into_iter()
+                    .cloned()
+                    .collect();
                 Some(BeanFactoryResult::BeanNames(v))
-            },
+            }
         }
     }
 }
@@ -134,15 +148,18 @@ pub struct BeanFactory {
 }
 
 impl BeanFactory {
-
     /// 在actic环境下创建BeanFactory
     pub fn new() -> Self {
-        BeanFactory { core_addr: BeanFactoryCore::start_default() }
+        BeanFactory {
+            core_addr: BeanFactoryCore::start_default(),
+        }
     }
 
     /// 在普通环境下，在一个新建的actix线程创建BeanFactoryCore,再创建BeanFactory
     pub fn spawn_new() -> Self {
-        BeanFactory { core_addr: BeanFactoryCore::default().spawn_start() }
+        BeanFactory {
+            core_addr: BeanFactoryCore::default().spawn_start(),
+        }
     }
 
     pub fn new_by_core(core_addr: Addr<BeanFactoryCore>) -> Self {
@@ -164,14 +181,10 @@ impl BeanFactory {
 
     pub async fn query_bean_names(&self) -> Vec<String> {
         match self.core_addr.send(BeanFactoryCmd::QueryBeanNames).await {
-            Ok(resp) => {
-                resp.map_or(vec![], |r|{
-                    match r {
-                        BeanFactoryResult::BeanNames(v) => v,
-                        _ => vec![]
-                    }
-                })
-            },
+            Ok(resp) => resp.map_or(vec![], |r| match r {
+                BeanFactoryResult::BeanNames(v) => v,
+                _ => vec![],
+            }),
             Err(_) => vec![],
         }
     }

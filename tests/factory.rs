@@ -2,7 +2,10 @@
 
 use actix::prelude::*;
 
-use bean_factory::{BeanDefinition,FactoryEvent,Inject,BeanFactory,BeanFactoryCore,setup_submitted_beans,ActorComponent, InjectComponent, FactoryData};
+use bean_factory::{
+    setup_submitted_beans, ActorComponent, BeanDefinition, BeanFactory, BeanFactoryCore,
+    FactoryData, FactoryEvent, Inject, InjectComponent,
+};
 
 struct Ping(usize);
 
@@ -10,7 +13,7 @@ impl Message for Ping {
     type Result = usize;
 }
 
-#[derive(Default,ActorComponent)]
+#[derive(Default, ActorComponent)]
 struct FooActor {}
 
 impl Actor for FooActor {
@@ -27,7 +30,7 @@ impl Handler<Ping> for FooActor {
 }
 
 /// Actor
-#[derive(Default,InjectComponent)]
+#[derive(Default, InjectComponent)]
 struct MyActor {
     count: usize,
     foo_addr: Option<Addr<FooActor>>,
@@ -128,9 +131,9 @@ async fn register_002() {
     let factory = BeanFactory::new();
     setup_submitted_beans(&factory);
     let bean_names = factory.query_bean_names().await;
-    println!("all beans size:{}",bean_names.len());
+    println!("all beans size:{}", bean_names.len());
     for item in &bean_names {
-        println!("\t{}",item)
+        println!("\t{}", item)
     }
     take(&factory).await;
     take(&factory).await;
