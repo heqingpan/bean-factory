@@ -97,7 +97,7 @@ impl Handler<ConfigCmd> for ConfigApi {
         let config_service = self.config_service.clone();
         let fut=async {
             if let Some(addr) = config_service {
-                println!("inject success. use inject config_service");
+                println!("inject success. use inject config_service handle msg");
                 addr.send(msg).await?
             }
             else{
