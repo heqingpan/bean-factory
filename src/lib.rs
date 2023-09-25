@@ -15,7 +15,7 @@ pub fn setup_submitted_beans(factory: &BeanFactory) {
     for bean in iter::<BeanDefinition> {
         factory.register(bean.clone());
     }
-    factory.init();
+    factory.do_init();
 }
 
 //获取所有注解声明bean列表

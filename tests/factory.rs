@@ -4,7 +4,7 @@ use actix::prelude::*;
 
 use bean_factory::{
     setup_submitted_beans, ActorComponent, BeanDefinition, BeanFactory, BeanFactoryCore,
-    FactoryData, FactoryEvent, Inject, InjectComponent,
+    FactoryData, Inject, InjectComponent,
 };
 
 struct Ping(usize);
@@ -118,7 +118,7 @@ async fn register_001() {
     let bean = BeanDefinition::actor_from_default::<FooActor>();
     factory.register(bean);
     println!("------001");
-    factory.init();
+    factory.do_init();
     println!("------002");
     take(&factory).await;
     take(&factory).await;

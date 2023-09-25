@@ -33,15 +33,18 @@ impl BeanFactoryCore {
     }
 
     fn init(&mut self) {
-        for (_, bean) in &self.bean_definition_map {
+        log::info!("BeanFactory start init ...");
+        for (name, bean) in &self.bean_definition_map {
             match &bean.provider {
                 model::Provieder::Fn(f) => {
                     if let Some(v) = f() {
                         self.bean_map.insert(bean.type_name.to_owned(), v);
+                        log::info!("BeanFactory init bean by fn: {}",name);
                     }
                 }
                 model::Provieder::Value(v) => {
                     self.bean_map.insert(bean.type_name.to_owned(), v.clone());
+                    log::info!("BeanFactory init bean value: {}",name);
                 }
             }
         }
@@ -65,20 +68,31 @@ impl BeanFactoryCore {
             */
             //self.bean_map.get(name).map(|e| Self::do_notify2(e.clone(), event));
             match (self.bean_map.get(name), bean.notify.as_ref()) {
-                (Some(c), Some(notify)) => notify(c.clone(), event.clone()),
+                (Some(c), Some(notify)) => {
+                    notify(c.clone(), event.clone());
+                    match &event {
+                        FactoryEvent::Inject { factory : _, factory_data : _ } => {
+                            log::info!("BeanFactory trigger inject, bean: {}",name);
+                        },
+                        FactoryEvent::Complete => {},
+                    }
+                },
                 (_, _) => {}
             }
         }
     }
 
-    fn inject(&mut self, ctx: &mut Context<Self>) {
+    fn inject(&mut self, ctx: &mut Context<Self>) -> FactoryData {
+        let factory_data = FactoryData(Arc::new(self.bean_map.clone()));
         let inject_event = FactoryEvent::Inject {
             factory: BeanFactory::new_by_core(ctx.address()),
-            factory_data: FactoryData(Arc::new(self.bean_map.clone())),
+            factory_data: factory_data.clone(),
         };
         let complete_event = FactoryEvent::Complete;
         self.do_notify_event(inject_event);
         self.do_notify_event(complete_event);
+        log::info!("BeanFactory complete initialization");
+        factory_data
     }
 }
 
@@ -99,11 +113,12 @@ impl Handler<BeanDefinition> for BeanFactoryCore {
 }
 
 impl Handler<InitFactory> for BeanFactoryCore {
-    type Result = ();
+    type Result = Option<FactoryData>;
 
     fn handle(&mut self, _msg: InitFactory, ctx: &mut Self::Context) -> Self::Result {
         self.init();
-        self.inject(ctx);
+        let factory_data = self.inject(ctx);
+        Some(factory_data)
     }
 }
 
@@ -175,7 +190,17 @@ impl BeanFactory {
     /// 初始化工厂
     /// 创建bean实例
     /// 并触发依赖注入
-    pub fn init(&self) {
+    /// 并等待返回容器数据
+    pub async fn init(&self) -> FactoryData {
+        match self.core_addr.send(InitFactory).await {
+            Ok(resp) => resp.unwrap(),
+            Err(_) => panic!("bean factory async init error!")
+        }
+    }
+
+    /// 触发初始化工厂
+    /// 不返回值
+    pub fn do_init(&self){
         self.core_addr.do_send(InitFactory);
     }
 

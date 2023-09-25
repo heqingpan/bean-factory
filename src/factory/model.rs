@@ -160,14 +160,15 @@ impl FactoryData {
     }
 }
 
+#[allow(unused_variables)]
 pub trait Inject {
     type Context;
     fn inject(&mut self, factory_data: FactoryData, factory: BeanFactory, ctx: &mut Self::Context);
-    fn complete(&mut self, ctx: &mut Self::Context);
+    fn complete(&mut self, ctx: &mut Self::Context) {} 
 }
 
 #[derive(Message)]
-#[rtype(result = "()")]
+#[rtype(result = "Option<FactoryData>")]
 pub struct InitFactory;
 
 #[derive(Message)]

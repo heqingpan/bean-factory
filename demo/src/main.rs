@@ -69,9 +69,6 @@ impl Inject for ConfigApi {
         } else {
             println!("ConfigApi:inject none");
         }
-    }
-
-    fn complete(&mut self, _ctx: &mut Self::Context) {
         println!("ConfigApi:inject complete");
     }
 }
@@ -100,10 +97,12 @@ impl Handler<ConfigCmd> for ConfigApi {
 
 #[actix::main]
 async fn main() -> anyhow::Result<()> {
+    std::env::set_var("RUST_LOG","info");
+    env_logger::builder().init();
     let factory = BeanFactory::new();
     factory.register(BeanDefinition::actor_with_inject_from_default::<ConfigApi>());
     factory.register(BeanDefinition::actor_from_default::<ConfigService>());
-    factory.init();
+    let _factory_data = factory.init().await;
     let api_addr: Addr<ConfigApi> = factory.get_actor().await.unwrap();
     let key = Arc::new("key".to_owned());
     api_addr.do_send(ConfigCmd::Set(

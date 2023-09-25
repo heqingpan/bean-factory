@@ -11,8 +11,8 @@ pub fn component_derive(input: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
     let name = &ast.ident;
     let gen = quote! {
-        bean_factory::submit! {
-            bean_factory::BeanDefinition::from_default::<#name>()
+        ::bean_factory::submit! {
+            ::bean_factory::BeanDefinition::from_default::<#name>()
         }
     };
 
@@ -24,8 +24,8 @@ pub fn actor_component_derive(input: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
     let name = &ast.ident;
     let gen = quote! {
-        bean_factory::submit! {
-            bean_factory::BeanDefinition::actor_from_default::<#name>()
+        ::bean_factory::submit! {
+            ::bean_factory::BeanDefinition::actor_from_default::<#name>()
         }
     };
 
@@ -37,24 +37,24 @@ pub fn inject_component_derive(input: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
     let name = &ast.ident;
     let gen = quote! {
-        impl bean_factory::Handler<bean_factory::FactoryEvent> for #name {
+        impl ::bean_factory::Handler<::bean_factory::FactoryEvent> for #name {
             type Result = ();
-            fn handle(&mut self, msg: bean_factory::FactoryEvent, ctx: &mut Self::Context) -> Self::Result {
+            fn handle(&mut self, msg: ::bean_factory::FactoryEvent, ctx: &mut Self::Context) -> Self::Result {
                 match msg {
-                    bean_factory::FactoryEvent::Inject {
+                    ::bean_factory::FactoryEvent::Inject {
                         factory,
                         factory_data,
                     } => {
-                        Inject::inject(self, factory_data, factory, ctx);
+                        ::bean_factory::Inject::inject(self, factory_data, factory, ctx);
                     }
-                    bean_factory::FactoryEvent::Complete => {
-                        Inject::complete(self, ctx);
+                    ::bean_factory::FactoryEvent::Complete => {
+                        ::bean_factory::Inject::complete(self, ctx);
                     }
                 }
             }
         }
         bean_factory::submit! {
-            bean_factory::BeanDefinition::actor_with_inject_from_default::<#name>()
+            ::bean_factory::BeanDefinition::actor_with_inject_from_default::<#name>()
         }
     };
 
@@ -109,18 +109,18 @@ fn impl_bean_derive(ast: &syn::DeriveInput, config: BeanConfig) -> TokenStream {
     let name = &ast.ident;
     let inject_handler = if config.is_inject {
         quote! {
-            impl bean_factory::Handler<bean_factory::FactoryEvent> for #name {
+            impl ::bean_factory::Handler<::bean_factory::FactoryEvent> for #name {
                 type Result = ();
-                fn handle(&mut self, msg: bean_factory::FactoryEvent, ctx: &mut Self::Context) -> Self::Result {
+                fn handle(&mut self, msg: ::bean_factory::FactoryEvent, ctx: &mut Self::Context) -> Self::Result {
                     match msg {
-                        bean_factory::FactoryEvent::Inject {
+                        ::bean_factory::FactoryEvent::Inject {
                             factory,
                             factory_data,
                         } => {
-                            Inject::inject(self, factory_data, factory, ctx);
+                            ::bean_factory::Inject::inject(self, factory_data, factory, ctx);
                         }
-                        bean_factory::FactoryEvent::Complete => {
-                            Inject::complete(self, ctx);
+                        ::bean_factory::FactoryEvent::Complete => {
+                            ::bean_factory::Inject::complete(self, ctx);
                         }
                     }
                 }
@@ -132,21 +132,21 @@ fn impl_bean_derive(ast: &syn::DeriveInput, config: BeanConfig) -> TokenStream {
     let register = if config.is_register {
         match (config.is_actor, config.is_inject) {
             (true, true) => quote! {
-                bean_factory::submit! {
-                    bean_factory::BeanDefinition::actor_with_inject_from_default::<#name>()
+                ::bean_factory::submit! {
+                    ::bean_factory::BeanDefinition::actor_with_inject_from_default::<#name>()
                 }
             },
             (true, false) => quote! {
-                bean_factory::submit! {
-                    bean_factory::BeanDefinition::actor_from_default::<#name>()
+                ::bean_factory::submit! {
+                    ::bean_factory::BeanDefinition::actor_from_default::<#name>()
                 }
             },
             (false, true) => quote! {
                 panic!("not actors cannot be injected!");
             },
             (false, false) => quote! {
-                bean_factory::submit! {
-                    bean_factory::BeanDefinition::from_default::<#name>()
+                ::bean_factory::submit! {
+                    ::bean_factory::BeanDefinition::from_default::<#name>()
                 }
             },
         }
